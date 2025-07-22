@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Message Window</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: transparent !important;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    pointer-events: none; /* Prevent interactions globally */
+  }
+
+
+    body.closing #message-box {
+      transform: scale(0.5) translateY(-100%);
+      transition: all 0.4s ease-in-out;
+      opacity: 0;
+    }
+
+
+    #message-box {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      left: 0px;
+      color: white;
+      max-width: 80vw;
+      padding: 20px 38px;
+      border-radius: 16px;
+      background: rgba(30, 30, 30, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      transition: all 0.6s ease;
+      pointer-events: auto; /* make box itself interactable */
+    }
+
+
+
+    #message-box.show {
+      opacity: 1;
+      transform: translateX(0%) scale(1) translateY(100px);
+    }
+
+    #message-box.closing {
+      opacity: 0;
+      transform: translateX(0%) scale(0) translateY(-125px);
+      transition: opacity 0.4s cubic-bezier(0.455, 0.03, 0.515, 0.955), transform 0.4s cubic-bezier(0.95, 0.05, 0.795, 0.035);
+    }
+
+    
+    #window-controls,
+    #summary-buttons,
+    .window-button,
+    #window-controls1,
+    #summary-buttons1,
+    .window-button1,
+    #btn-full,
+    #window-WIN,
+    #btn-short {
+      pointer-events: auto; /* These are clickable */
+    }
+
+    #window-controls1 {
+      position: absolute;
+      top: 12px;
+      left: 16px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .window-button1 {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #ff5f56;
+      box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    .window-button1:nth-child(2) { background-color: #ffbd2e00; }
+    .window-button1:nth-child(3) { background-color: #00000000; }
+
+
+    #window-controls {
+      position: absolute;
+      top: 12px;
+      left: 16px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .window-button {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #ff5f56;
+      box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    .window-button:nth-child(2) { background-color: #ffbd2e; }
+    .window-button:nth-child(3) { background-color: #27c93f; }
+
+    #progress-bar {
+      height: 4px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 100px;
+      overflow: hidden;
+      margin-top: 18px;
+    }
+
+    #progress-fill {
+      height: 100%;
+      width: 100%;
+      background: #00bfff;
+      animation: shrink 30s linear forwards;
+    }
+
+    @keyframes shrink {
+      from { width: 100%; }
+      to { width: 0%; }
+    }
+
+    #summary-buttons {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    #summary-buttons.show {
+      display: block;
+      opacity: 1;
+    }
+
+    #summary-output {
+      pointer-events: none;
+    }
+
+    .buttons-container {
+      position: absolute; /* or fixed if it's global */
+      z-index: 9999;
+      top: 10px; /* adjust as needed */
+      right: 10px;
+      display: flex;
+      gap: 10px;
+    }
+
+    #summary-output {
+      position: absolute;
+      z-index: 1000; /* lower than buttons */
+      bottom: 20px;
+      left: 20px;
+      max-width: 80vw;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 15px;
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
+    }
+
+
+    #summary-output {
+      pointer-events: none;
+    }
+
+
+  </style>
+</head>
+<body style="background: transparent;">
+  <div id="message-box" tabindex="0" aria-live="polite">
+    <div id="window-controls">
+      <div class="window-button" onclick="closeWindow()"></div>
+      <div class="window-button"></div>
+      <div class="window-button"></div>
+    </div>
+    <span id="message-text">Loading...(might be an error!)</span>
+    <div id="progress-bar"><div id="progress-fill"></div></div>
+    <div id="summary-buttons">
+      <button id="btn-full">📖 Full</button>
+      <button id="btn-short">⚡ Short</button>
+    </div>
+  </div>
+
+  <script>
+  const { ipcRenderer } = require('electron');
+
+  const box = document.getElementById('message-box');
+  const textEl = document.getElementById('message-text');
+  const summaryBox = document.getElementById('summary-buttons');
+  const btnFull = document.getElementById('btn-full');
+  const btnShort = document.getElementById('btn-short');
+
+  let fullSummary = "";
+  let shortSummary = "";
+
+  // Default user settings
+  let userSettings = {
+    TitleBar: "manual",
+    replyLang: "Tamil",
+    voiceLang: "ta-IN",
+    voiceSpeed: 1.0
+  };
+
+  // Load from localStorage if available
+  function loadSettings() {
+    try {
+      const saved = JSON.parse(localStorage.getItem("metaAIConfig") || "{}");
+      enableWeatherComments: false,  // default
+      userSettings = { ...userSettings, ...saved };
+    } catch (err) {
+      console.warn("⚠️ Failed to parse settings:", err);
+    }
+  }
+
+  // Clean text before speaking
+  function cleanForSpeech(text) {
+    return text
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDDE6-\uDDFF]|\uD83D[\uDC00-\uDE4F\uDE80-\uDEFF]|\uD83E[\uDD00-\uDDFF]/g, '')
+      .replace(/https?:\/\/[^\s]+/g, '')
+      .replace(/\s+/g, ' ')
+      .replace(/[,;:]{2,}/g, ',')
+      .replace(/\[([^\]]*)\]/g, '')
+      .replace(/<.*?>/g, '')  // remove HTML tags
+      .toLowerCase()
+      .trim();
+  }
+
+  // Speak using SpeechSynthesis API with proper settings
+  function speak(text, lang = userSettings.voiceLang, speed = userSettings.voiceSpeed) {
+    if (!text) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanForSpeech(text));
+    utterance.lang = lang;
+    utterance.rate = speed;
+    utterance.pitch = 1.1;
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function speakWithinTime(text, maxDurationInSec = 30) {
+    const words = text.trim().split(/\s+/).length;
+    const averageRate = Math.max(0.5, Math.min(3, words / maxDurationInSec));
+    speak(text, userSettings.voiceLang, averageRate);
+  }
+
+  // Close with animation
+  function closeWindow() {
+    document.body.classList.add('closing');
+    setTimeout(() => window.close(), 400);
+  }
+
+  // Main message display and voice trigger
+  ipcRenderer.on('display-message', (_, msg, settings = {}) => {
+    loadSettings();
+    ipcRenderer.send("settings-updated", userSettings);
+
+    box.classList.add('show');
+    box.focus();
+    summaryBox.style.display = "none";
+
+    textEl.textContent = msg;
+    speakWithinTime(msg, 30);
+
+    setTimeout(() => {
+      box.classList.remove('show');
+      closeWindow();
+    }, 30000);
+  });
+
+  // Summary mode with buttons
+  ipcRenderer.on('yt-summary-options', (_, data, settings = {}) => {
+    loadSettings();
+
+    fullSummary = data.full;
+    shortSummary = data.short;
+
+    summaryBox.classList.add("show");
+    box.classList.add('show');
+    box.focus();
+
+    textEl.textContent = "🎬 Summary ready. Choose:";
+  });
+
+  // Summary button events
+  btnFull.addEventListener('click', () => {
+    textEl.textContent = fullSummary;
+    speak(fullSummary);
+    summaryBox.style.display = "none";
+  });
+
+  btnShort.addEventListener('click', () => {
+    textEl.textContent = shortSummary;
+    speak(shortSummary);
+    summaryBox.style.display = "none";
+  });
+
+  // Escape to close
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeWindow();
+  });
+
+  // Initial load
+  loadSettings();
+</script>
+</body>
+</html>

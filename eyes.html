@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body {
+    background: black;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  #eyes {
+    display: flex;
+    justify-content: center;
+    margin-top: 100px;
+    gap: 40px;
+  }
+
+  .eye {
+    width: 60px;
+    height: 60px;
+    background: white;
+    border-radius: 50%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pupil {
+    width: 20px;
+    height: 20px;
+    background: black;
+    border-radius: 50%;
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    transition: transform 0.2s ease;
+  }
+
+  .eye.blink {
+    animation: blink 0.3s ease-in-out;
+  }
+
+  @keyframes blink {
+    0%   { transform: scaleY(1); }
+    50%  { transform: scaleY(0.1); }
+    100% { transform: scaleY(1); }
+  }
+</style>
+</head>
+
+<body>
+  <div id="eyes">
+    <div class="eye" id="left-eye"><div class="pupil" id="left-pupil"></div></div>
+    <div class="eye" id="right-eye"><div class="pupil" id="right-pupil"></div></div>
+  </div>
+
+<script>
+  const leftEye = document.getElementById("left-eye");
+  const rightEye = document.getElementById("right-eye");
+  const leftPupil = document.getElementById("left-pupil");
+  const rightPupil = document.getElementById("right-pupil");
+
+  function trackMouse(e) {
+    const eyes = [leftEye, rightEye];
+    const pupils = [leftPupil, rightPupil];
+
+    eyes.forEach((eye, i) => {
+      const rect = eye.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      const dx = e.clientX - centerX;
+      const dy = e.clientY - centerY;
+      const angle = Math.atan2(dy, dx);
+      const distance = Math.min(15, Math.hypot(dx, dy) / 10);
+
+      const x = Math.cos(angle) * distance;
+      const y = Math.sin(angle) * distance;
+
+      pupils[i].style.transform = `translate(${x}px, ${y}px)`;
+    });
+  }
+
+  window.addEventListener("mousemove", trackMouse);
+
+  function blinkEyes() {
+    leftEye.classList.add("blink");
+    rightEye.classList.add("blink");
+    setTimeout(() => {
+      leftEye.classList.remove("blink");
+      rightEye.classList.remove("blink");
+    }, 300);
+  }
+
+  function randomLook() {
+    const positions = [
+      "translate(4px, -4px)",
+      "translate(-4px, -4px)",
+      "translate(4px, 4px)",
+      "translate(-4px, 4px)",
+      "translate(0px, 0px)",
+    ];
+    const pos = positions[Math.floor(Math.random() * positions.length)];
+    leftPupil.style.transform = pos;
+    rightPupil.style.transform = pos;
+  }
+
+  setInterval(() => blinkEyes(), 5000 + Math.random() * 5000);
+  setInterval(() => randomLook(), 4000 + Math.random() * 2000);
+</script>
+</body>
+</html>

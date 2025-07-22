@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+  <body style="margin:0; background:rgba(0,0,0,0.7); color:white; font-family:sans-serif;">
+    <div id="log" style="padding:10px;">No response yet</div>
+
+    <script>
+      const { ipcRenderer } = require('electron');
+
+      ipcRenderer.on('display-reply', (event, data) => {
+        document.getElementById('log').innerText = data;
+      });
+    </script>
+  </body>
+</html>

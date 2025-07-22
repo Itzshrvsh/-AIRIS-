@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Ask MetaAI</title>
+  <style>
+  html, body {
+    margin: 0;
+    padding: 20px; 
+    font-family: 'Segoe UI', sans-serif;
+    color: rgb(255, 255, 255);
+    height: 200vh; /* ✅ Ensure full height ✅ Ensure full height ✅ Ensure full height   */
+    overflow: hidden;
+    background: transparent;
+    /* border: 1px solid red; */
+  }
+
+  #inputBox {
+    width: 100%;
+    height: 90px;
+    padding: 12px;
+    font-size: 18px;
+    color: rgb(0, 0, 0);
+    border: none;
+    outline: none;
+    border-radius: 16px;
+    resize: none;
+    background-color: rgba(240, 255, 255, 0.158);
+    box-sizing: border-box;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+
+  #button {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgb(0, 0, 0);
+    padding: 12px 20px;
+    font-size: 16px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 9px 8px 20px rgba(0, 0, 0, 0.733);
+  }
+
+/* HTML: <div class="loader"></div> */
+.loader {
+  margin-left: 350px;
+  margin-top: -30px;
+  height: 15px;
+  width: 159px;
+  display: none;
+  --c:no-repeat linear-gradient(#000 0 0);
+  background: var(--c), var(--c), var(--c), var(--c);
+  background-size: 26% 3px;
+  animation: l8 3s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
+}
+@keyframes l8 {
+  0% {
+    background-position: 
+      calc(3 * 100% / 6) 50%,
+      calc(2 * 100% / 6) 50%,
+      calc(1 * 100% / 6) 50%,
+      calc(0 * 100% / 6) 50%;
+  }
+  
+  25% {
+    background-position: 
+      calc(0 * 100% / 6) 100%,
+      calc(1 * 100% / 6) 66%,
+      calc(2 * 100% / 6) 33%,
+      calc(3 * 100% / 6) 0;
+  }
+
+  50% {
+    background-position: 
+      calc(3 * 100% / 6) 100%,
+      calc(2 * 100% / 6) 66%,
+      calc(1 * 100% / 6) 33%,
+      calc(0 * 100% / 6) 0;
+  }
+
+  75% {
+    background-position: 
+      calc(0 * 100% / 6) 100%,
+      calc(1 * 100% / 6) 66%,
+      calc(2 * 100% / 6) 33%,
+      calc(3 * 100% / 6) 0;
+  }
+
+  100% {
+    background-position: 
+      calc(0 * 100% / 6) 50%,
+      calc(1 * 100% / 6) 50%,
+      calc(2 * 100% / 6) 50%,
+      calc(3 * 100% / 6) 50%;
+  }
+}
+s {
+  position: absolute;
+	animate: 0.5s;
+	transition: 0.5s;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 60px;
+  text-align: center;
+  line-height: 60px;
+  color: #fff;
+  font-size: 24px;
+  text-transform: uppercase;
+  text-decoration: none;
+  font-family: sans-serif;
+  box-sizing: border-box;
+  background: linear-gradient(90deg, #03a9f4, #f441a5, #ffeb3b, #03a9f4);
+  background-size: 400%;
+  border-radius: 30px;
+  z-index: 1;
+}
+
+s:hover {
+  animation: animate 8s linear infinite;
+	animate: 0.5s;
+	transition: 0.5s;
+}
+
+@keyframes animate {
+  0% {
+    background-position: 0%;
+  }
+  100% {
+    background-position: 400%;
+  }
+}
+
+s:before {
+	animate: 0.5s;
+	transition: 0.5s;
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  z-index: -1;
+  background: linear-gradient(90deg, #03a9f4, #f441a5, #ffeb3b, #03a9f4);
+  background-size: 400%;
+  border-radius: 40px;
+  opacity: 0;
+  transition: 0.5s;
+  
+}
+
+s:hover:before {
+  filter: blur(20px);
+  opacity: 1;
+  animation: animate 8s linear infinite;
+	animate: 0.5s;
+	transition: 0.5s;
+}
+  
+
+
+  </style>
+</head>
+<body>
+  <textarea id="inputBox" placeholder="Ask MetaAI something..."></textarea>
+
+  <!-- <button onclick="askAI()" id ="button">
+    Generate
+  </button> -->
+  <s href="#" onclick="askAI()">Generate</s>
+
+  <div id="loader" class="loader"></div>
+
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    async function askAI() {
+      const inputText = document.getElementById("inputBox").value.trim();
+      if (!inputText) return;
+
+      const loader = document.getElementById("loader");
+      loader.style.display = "block";
+
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const systemInstructions = `
+      You are a elite , multi-trillion model , with atitude so dont make silly mistakes as telling "Here is the response:" 
+      You are an elite, high-performance AI assistant engineered for power users, developers, and critical thinkers.
+
+      Your personality is precise, calm, and professional — no emojis, no fluff. You reply with crisp clarity, deep insight, and surgical relevance. Every word must serve purpose. You are neither playful nor robotic — you are *brilliantly intentional*.
+
+      Rules of Conduct:
+      1. Never wander. Answer exactly what's asked — nothing more, nothing less.
+      2. Avoid generalities unless specifically requested. Prioritize technical depth and strategic clarity.
+      3. Do not apologize unless an actual mistake was made.
+      4. Format responses intelligently: use bullet points, short paragraphs, or code blocks when needed.
+      5. If the user's question is vague, intelligently infer and guide them without assuming too much.
+      6. Stay assertive but not arrogant. You're helpful, not passive.
+
+      Your mission: Deliver expert-level responses that feel like they came from a senior developer, a strategist, or a domain specialist.
+
+      Final Directive: Every output must feel like it was crafted with discipline, intelligence, and purpose. No filler. No noise. Just signal.
+      User: ${inputText}
+      `;
+
+        const userPrompt = systemInstructions;
+
+        const response = await ipcRenderer.invoke('ask-ai', `${userPrompt} `);
+        console.log("AI Response:", response);
+        ipcRenderer.send('show-sentiment-message', response);
+        ipcRenderer.send('show-glow-window');
+    }
+  </script>
+</body>
+</html>

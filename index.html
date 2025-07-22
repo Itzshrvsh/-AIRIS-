@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background-color: rgba(0, 0, 0, 0);
+    color: white;
+    font-size: 16px;
+    padding: 20px;
+    pointer-events: none; /* make everything non-clickable */
+  }
+  html {
+    background-color: transparent !important;
+  }
+
+
+
+
+
+    #app-wrapper, body {
+      pointer-events: none;
+    }
+    
+      #eyes {
+      display: flex;
+      justify-content: center;
+      margin-top: 150px;
+      gap: 40px;
+      transition: all 0.5s ease;
+    }
+
+  .eye {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(to bottom, #ffffff, #ffaa66); /* linear light flow */
+    box-shadow: 0 0 20px rgba(255, 170, 100, 0.6); /* subtle base glow */
+    transform: rotateX(0deg); /* fixed that odd value */
+  }
+
+  .eye::before {
+  content: '';
+  position: absolute;
+  top: -30%;
+  left: 0;
+  width: 100%;
+  height: 160%;
+  background: linear-gradient(to bottom, rgba(255, 200, 100, 0.4), rgba(255, 120, 0, 0.2));
+  filter: blur(20px);
+  z-index: -1;
+}
+
+
+
+
+    .pupil {
+      width: 20px;
+      height: 20px;
+      background: black;
+      border-radius: 50%;
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      transition: transform 0.3s ease;
+    }
+
+    .eyelid {
+      position: absolute;
+      width: 100px;
+      height: 50px;
+      top: 0;
+      left: 0;
+      border-top-left-radius: 100% 100%;
+      border-top-right-radius: 100% 100%;
+      background: rgba(0, 0, 0, 0.6);
+      transition: transform 0.4s ease;
+      transform: translateY(-100%); /* hidden */
+    }
+
+    .eyelid.closed {
+      transform: translateY(0); /* covers the eye */
+    }
+
+    .blink-eyelid .eyelid {
+      animation: eyelidBlink 0.3s ease-in-out;
+    }
+
+    @keyframes eyelidBlink {
+      0%   { top: -70%; }
+      50%  { top: 0%; }
+      100% { top: -70%; }
+    }
+
+    @keyframes wink {
+      0%   { transform: scaleY(1); }
+      50%  { transform: scaleY(0.1); }
+      100% { transform: scaleY(1); }
+    }
+
+    .eye.wink-eyelid {
+      animation: wink 0.3s ease-in-out;
+    }
+
+    .hidden-eyes {
+      transform: translateY(-100px);
+    }
+
+
+
+    
+    #ai-message-box{
+      position:absolute;
+      top:150px; 
+      left:50%; 
+      transform:translateX(-50%);
+      background:#111; 
+      color:#0f0; 
+      padding:10px 20px; 
+      border-radius:12px;
+      font-family:monospace; 
+      font-size:16px; 
+      z-index:1000; 
+      display:none;
+      transition: opacity 0.5s ease;
+    }
+
+
+    .eye.blink {
+      animation: blink 0.3s ease-in-out;
+    }
+
+    #glass {
+      top: -26px;
+      left: 22px;
+      scale: 1.9;
+      color: #000000ea;
+    }
+
+
+    .hand {
+      position: absolute;
+      font-size: 2.5rem;
+      transition: ease-in 0.5s ease-in-out;
+      z-index: 998;
+    }
+
+    #left-hand {
+      left: -60px;
+      top: 24px;
+    }
+
+    #right-hand {
+      right: -60px;
+      top: 24px;
+    }
+
+
+    *:focus {
+      outline: none !important;
+    }
+
+
+    @keyframes blink {
+      0%, 100% {
+        transform: scaleY(1);
+      }
+      50% {
+        transform: scaleY(0.1);
+      }
+    }
+    .message-box {
+      background: rgba(30, 30, 30, 0.95);
+      color: #fff;
+      padding: 20px 25px;
+      border-radius: 15px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+      font-size: 16px;
+      min-width: 300px;
+      max-width: 600px;
+      pointer-events: auto;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .message-box.hide {
+      opacity: 0;
+      transform: scale(0.95); /* Optional shrink effect */
+    }
+
+    .message-box::-moz-focus-inner {
+      border: 1px #000000;
+    }
+
+
+    @keyframes popup {
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+  
+
+
+
+
+  </style>
+</head>
+<body>
+
+
+
+
+<div id="eyes">
+  <div class="eye" id="left-eye">
+    <div class="pupil" id="left-pupil"></div>
+    <div class="eyelid"></div>
+  </div>
+  <div class="eye" id="right-eye">
+    <div class="pupil" id="right-pupil"></div>
+    <div class="eyelid"></div>
+  </div>
+</div>
+<div id="ai-message-box"></div>
+</div>
+
+
+
+
+<script>
+  const { ipcRenderer } = require('electron');
+  const leftEye = document.getElementById("left-eye");
+  const rightEye = document.getElementById("right-eye");
+  const leftPupil = document.getElementById('left-pupil');
+  const rightPupil = document.getElementById('right-pupil');
+  const leftHand = document.getElementById('left-hand');
+  const rightHand = document.getElementById('right-hand');
+  const aiContainer = document.getElementById('ai-container');
+  const aiMessage = document.getElementById('ai-message');
+  const glass = document.getElementById('glass')
+  const eyeRadius = 30; // adjust if your eye is bigger
+  const pupilRadius = 10;
+  
+  const maxOffset = eyeRadius - pupilRadius - 10; // give a bit of margin
+  const slideBox = document.getElementById('slide-ai-box');
+  const slideText = document.getElementById('slide-ai-text');
+  const closeBtn = document.getElementById('slide-ai-close');
+  const messageBox = document.getElementById('message-box'); // Make sure this exists
+  const trayBox = document.getElementById("tray-box");
+  const eyes = document.getElementById('eyes');
+  const buttons = document.querySelectorAll('.button');
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('mouseenter', () => {
+      ipcRenderer.send('allow-mouse-events');
+    });
+
+    btn.addEventListener('mouseleave', () => {
+      ipcRenderer.send('ignore-mouse-events');
+    });
+
+    btn.addEventListener('click', () => {
+      ipcRenderer.send('menuwin');
+    });
+  });
+
+
+
+  let isIdle = false;
+  let idleTimeout = null;
+  let messageTimeout = null;
+  let randomEyeInterval = null;
+  let latestMousePos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  let slideTimeout = null;
+  let idleTimer = null;
+  let idleThreshold =  8000
+  let idleTimerEye = null;
+  let idleTimerPose = null;
+  const idleThresholdwait = 10000; // e.g., 10s
+  const prePoseDelay = 4000;       // 4s before eyes close
+  let mouseX = 0;
+  let mouseY = 0;
+  let targetX = window.innerWidth / 2;
+  let targetY = window.innerHeight / 2;
+  let isRandom = true;
+  let eyesActive = true;
+  let trayActivated = false;
+  // Approx. speech rate 2x = 300 words/min = ~1500 chars/min = 25 chars/sec
+  let rate = 2;
+  let charsPerSecond = 25 * rate;
+  let speed = 1000 / charsPerSecond; // ~40ms per char
+  let selectedReplyLang = "English";
+  let selectedVoiceLang = "ta-IN";
+  let ytSummaries = null;
+  
+  // document.getElementById('tray-box').addEventListener('click', () => {
+  //   console.log("Tray clicked!");
+  // });
+
+  // trayBox.addEventListener('mouseenter', () => {
+  //   ipcRenderer.send('allow-mouse-events');
+  // });
+
+  // trayBox.addEventListener('mouseleave', () => {
+  //   ipcRenderer.send('ignore-mouse-events');
+  // });
+
+  ipcRenderer.on('global-mouse', (event, pos) => {
+    const eyeCenters = getEyeCenters();
+
+    updatePupil(leftPupil, eyeCenters.left, pos);
+    updatePupil(rightPupil, eyeCenters.right, pos);
+  });
+
+      function showReply(text) {
+      // your logic to display reply
+      winkRandomEye(); // 👁️ throw the wink
+    }
+
+    buttons.forEach((btn) => {
+      btn.addEventListener('mouseenter', () => {
+        window.electronAPI.allowMouse();
+      });
+
+      btn.addEventListener('mouseleave', () => {
+        window.electronAPI.ignoreMouse();
+      });
+
+      btn.addEventListener('click', () => {
+        window.electronAPI.showMessage();
+      });
+    });
+
+
+
+    // trayBox.addEventListener("click", () => {
+    //   trayActivated = true;
+    //   trayBox.classList.add("active");
+
+    //   // Activate the AI logic here
+    //   activateEyesAndAI();
+    // });
+
+
+      function stripEmojis(text) {
+        return text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDDE6-\uDDFF]|\uD83D[\uDC00-\uDE4F\uDE80-\uDEFF]|\uD83E[\uDD00-\uDDFF])/g, '');
+      }
+
+        
+
+
+  function trackMouse(e) {
+    const eyes = [leftEye, rightEye];
+    const pupils = [leftPupil, rightPupil];
+
+    eyes.forEach((eye, i) => {
+      const rect = eye.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      const dx = e.clientX - centerX;
+      const dy = e.clientY - centerY;
+      const angle = Math.atan2(dy, dx);
+      const distance = Math.min(15, Math.hypot(dx, dy) / 10);
+
+      const x = Math.cos(angle) * distance;
+      const y = Math.sin(angle) * distance;
+
+      pupils[i].style.transform = `translate(${x}px, ${y}px)`;
+    });
+  }
+  
+  function closeEyelid() {
+    document.getElementById('eyelid-path').classList.remove('open');
+    document.getElementById('eyelid-path').classList.add('closed');
+  }
+
+  function openEyelid() {
+    document.getElementById('eyelid-path').classList.remove('closed');
+    document.getElementById('eyelid-path').classList.add('open');
+  }
+
+
+    window.addEventListener("mousemove", trackMouse);
+
+    function blinkEyes() {
+      leftEye.classList.add("blink-eyelid");
+      rightEye.classList.add("blink-eyelid");
+
+      setTimeout(() => {
+        leftEye.classList.remove("blink-eyelid");
+        rightEye.classList.remove("blink-eyelid");
+      }, 300);
+    }
+
+    function winkRandomEye() {
+      const eye = Math.random() > 0.5 ? leftEye : rightEye;
+      eye.classList.add("wink-eyelid");
+      setTimeout(() => {
+        eye.classList.remove("wink-eyelid");
+      }, 300);
+      const eyes = Math.random() > 0.5;
+      eyes.classList.add("hidden-eyes");
+      setTimeout(() => {
+        eyes.classList.remove("hidden-eyes");
+      }, 5000);
+
+    }
+
+
+    function randomLook() {
+      const positions = [
+        "translate(4px, -4px)",
+        "translate(-4px, -4px)",
+        "translate(4px, 4px)",
+        "translate(-4px, 4px)",
+        "translate(0px, 0px)",
+      ];
+      const pos = positions[Math.floor(Math.random() * positions.length)];
+      leftPupil.style.transform = pos;
+      rightPupil.style.transform = pos;
+    }
+
+    setInterval(() => blinkEyes(), 5000 + Math.random() * 5000);
+    setInterval(() => randomLook(), 1000 + Math.random() * 1000);
+
+    ipcRenderer.on('shortcut-wink', () => {
+      console.log('Shortcut triggered!');
+      winkRandomEye(); // or your own logic here
+    });
+
+
+    
+    ipcRenderer.on('yt-summary-options', (_, data) => {
+      ytSummaries = data;
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (!ytSummaries) return;
+
+      if (e.key.toLowerCase() === 'f') {
+        ipcRenderer.send('show-sentiment-message', ytSummaries.full);
+      } else if (e.key.toLowerCase() === 's') {
+        ipcRenderer.send('show-sentiment-message', ytSummaries.short);
+      }
+    });
+
+
+// document.addEventListener('mousemove', () => {
+//   clearTimeout(idleTimerEye);
+//   clearTimeout(idleTimerPose);
+
+//   eyes.classList.add('show');
+//   eyes.classList.remove('closing');
+
+//   idleTimerPose = setTimeout(() => {
+//     setHandPose('shrug'); // 👐 The pose of "I give up on this user"
+//   }, idleThresholdwait - prePoseDelay);
+
+//   idleTimerEye = setTimeout(() => {
+//     eyes.classList.remove('show');
+//     eyes.classList.add('closing');
+//   }, idleThresholdwait);
+// });
+
+// document.addEventListener('keydown', () => {
+//   clearTimeout(idleTimerEye);
+//   clearTimeout(idleTimerPose);
+
+//   idleTimerPose = setTimeout(() => {
+//     setHandPose('shrug');
+//   }, idleThresholdwait - prePoseDelay);
+
+//   idleTimerEye = setTimeout(() => {
+//     eyes.classList.remove('show');
+//     eyes.classList.add('closing');
+//   }, idleThresholdwait);
+// });
+// function updatePupil(pupil, eyeCenter, screenMouse) {
+//   // Convert global screen coords to window-relative coords
+//   const mouseX = screenMouse.x - window.screenX;
+//   const mouseY = screenMouse.y - window.screenY;
+
+//   const dx = mouseX - eyeCenter.x;
+//   const dy = mouseY - eyeCenter.y;
+//   const angle = Math.atan2(dy, dx);
+//   const distance = Math.min(maxOffset, Math.sqrt(dx * dx + dy * dy));
+
+//   const offsetX = Math.cos(angle) * distance;
+//   const offsetY = Math.sin(angle) * distance;
+
+//   pupil.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+// }
+
+
+  // function getEyeCenters() {
+  //   const leftEye = document.getElementById('left-eye').getBoundingClientRect();
+  //   const rightEye = document.getElementById('right-eye').getBoundingClientRect();
+
+  //   return {
+  //     left: {
+  //       x: leftEye.left + leftEye.width / 2,
+  //       y: leftEye.top + leftEye.height / 2
+  //     },
+  //     right: {
+  //       x: rightEye.left + rightEye.width / 2,
+  //       y: rightEye.top + rightEye.height / 2
+  //     }
+  //   };
+  // }
+
+
+
+
+  // function startAnimation() {
+  //   const loader = document.getElementById('loader');
+  //   loader.classList.add('show');
+  // }
+
+  // function stopAnimation() {
+  //   const loader = document.getElementById('loader');
+  //   loader.classList.remove('show');
+  // }
+
+
+
+
+  // async function handleUserInput(rawInput) {
+  //   const englishInput = await autoTranslateToEnglish(rawInput);
+  //   console.log("Translated:", englishInput);
+
+  //   // Now send this English text to your AI
+  //   askAI(englishInput).then((response) => {
+  //     showAnimatedMessage(response);
+  //     speak(response); // optional TTS
+  //   });
+  // }
+
+
+  // function setHandPose(emotion) {
+  //   leftHand.style.display = 'block';
+  //   rightHand.style.display = 'block';
+  //   leftHand.style.animation = '';
+  //   rightHand.style.animation = '';
+
+  //   switch (emotion) {
+  //     case 'shrug':
+  //       leftHand.innerText = '🤷‍♂️';
+  //       rightHand.innerText = '🤷‍♀️'; // mirrored shrug
+  //       break;
+  //     case 'flex':
+  //       leftHand.innerText = '💪';
+  //       rightHand.innerText = '💪';
+  //       break;
+  //     case 'wave':
+  //       leftHand.innerText = '👋';
+  //       rightHand.innerText = '👋';
+  //       leftHand.style.animation = 'wave 1s ease-in infinite';
+  //       rightHand.style.animation = 'wave 1s ease-in infinite';
+  //       break;
+  //     case 'stop':
+  //       leftHand.innerText = '🛑';
+  //       rightHand.innerText = '🛑';
+  //       break;
+
+  //     case 'nerd':
+  //       leftHand.innerText = '☝🏻';
+  //       rightHand.innerText = '';
+  //       break;
+
+  //     case 'happy':
+  //       leftHand.innerText = '😃';
+  //       rightHand.innerText = '😃';
+  //       break;
+
+  //     case 'sad':
+  //       leftHand.innerText = '😞';
+  //       rightHand.innerText = '😞';
+  //       break;
+
+
+  //     case 'default':
+  //       leftHand.style.display = 'none';
+  //       rightHand.style.display = 'none';
+  //       break;
+  //   }
+  // }
+
+
+
+  // document.addEventListener('keydown', (e) => {
+  //   if (e.ctrlKey && e.shiftKey && e.code === 'KeyA') {
+  //     setHandPose('wave');
+  //     setTimeout(() => {
+  //       if (idle) setHandPose('default');
+  //     }, 2500);
+  //   }
+  // });
+
+
+  // function resetIdleTimer() {
+  //   clearTimeout(idleTimer);
+
+  //   if (isIdle) {
+  //     // Mouse just became active again
+  //     setHandPose('none');
+  //     isIdle = false;
+  //   }
+
+  //   idleTimer = setTimeout(() => {
+  //     eyes.classList.remove('show');
+  //     eyes.classList.add('closing');
+  //     setHandPose('shrug');
+  //     isIdle = true;
+  //   }, idleThreshold);
+  // }
+
+
+
+  // document.addEventListener('mousemove', resetIdleTimer);
+  // document.addEventListener('keydown', resetIdleTimer);
+
+  // function showAIMessage(text) {
+  //   aiMessage.innerText = text;
+  //   aiContainer.style.display = "flex";
+  //   aiContainer.style.opacity = "0";
+  //   aiContainer.style.transform = "translate(-50%, -30px)";
+  //   setHandPose('flex');
+
+  //   setTimeout(() => {
+  //     aiContainer.style.opacity = "1";
+  //     aiContainer.style.transform = "translate(-50%, 0)";
+  //   }, 10);
+
+  //   if (messageTimeout) clearTimeout(messageTimeout);
+  //   messageTimeout = setTimeout(() => {
+  //     aiContainer.style.opacity = "0";
+  //     aiContainer.style.transform = "translate(-50%, -30px)";
+  //     setTimeout(() => {
+  //       aiContainer.style.display = "none";
+  //       if (!idle) setHandPose('default');
+  //     }, 300);
+  //   }, 9000);
+  // }
+
+  // function activateEyesAndAI() {
+  //   console.log("MetaAI is now awake 👁️‍🗨️✨");
+
+  //   // Enable mouse tracking, animations, AI prompts, etc.
+  //   document.dispatchEvent(new CustomEvent("meta-ai-activated"));
+  // }
+
+
+  // window.ipcRenderer.on('ollama-processing', (_, isProcessing) => {
+  //   const handEl = document.getElementById('left-hand');
+  //   const eyesEl = document.getElementById('eyes');
+
+  //   if (isProcessing) {
+  //     handEl.classList.add('flexing');
+  //     eyesEl.classList.add('thinking');
+  //   } else {
+  //     handEl.classList.remove('flexing');
+  //     eyesEl.classList.remove('thinking');
+  //   }
+  // });
+
+  // function doEyeAction(action) {
+  //   const left = document.getElementById("left-eye");
+  //   const right = document.getElementById("right-eye");
+
+  //   left.className = 'eye';
+  //   right.className = 'eye';
+
+  //   switch(action) {
+  //     case 'shrug':
+  //       left.classList.add('shrug');
+  //       right.classList.add('shrug');
+  //       break;
+  //     case 'flex':
+  //       left.classList.add('flex');
+  //       right.classList.add('flex');
+  //       break;
+  //     case 'stop':
+  //       left.classList.add('stop');
+  //       right.classList.add('stop');
+  //       break;
+  //     default:
+  //       break;
+  //   }
+
+  //   setTimeout(() => {
+  //     left.className = 'eye';
+  //     right.className = 'eye';
+  //   }, 1000); // reset after 1s
+  // }
+
+  // document.addEventListener('keydown', (e) => {
+  //   if (e.ctrlKey && e.shiftKey && e.key === 'Z') {
+  //     doEyeAction('flex');
+  //   }
+  // });
+
+
+  // function blinkEyes() {
+  //   const left = document.getElementById("left-eye");
+  //   const right = document.getElementById("right-eye");
+  //   left.classList.add("blink");
+  //   right.classList.add("blink");
+  //   setTimeout(() => {
+  //     left.classList.remove("blink");
+  //     right.classList.remove("blink");
+  //   }, 300); // match blink duration
+  // }
+  // setInterval(() => {
+  //   blinkEyes();
+  // }, 4000); // every 4 seconds
+
+
+
+  
+
+  // // Initialize the timer immediately
+  // resetIdleTimer();
+
+    // When summary is ready, listen for 'F' or 'S' keys
+    window.addEventListener('keydown', (event) => {
+      if (event.key.toLowerCase() === 'f') {
+        window.electronAPI.sendSummaryChoice('full');
+      } else if (event.key.toLowerCase() === 's') {
+        window.electronAPI.sendSummaryChoice('short');
+      }
+    });
+
+</script>
+
+</body>
+</html>
